@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.lock
+bun.lock
+ws-capture.json
+*.tsbuildinfo
+.DS_Store
