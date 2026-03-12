@@ -28,9 +28,7 @@ import type {
 /** Build cookie string from options */
 export function buildCookie(options: ClaudeRemoteOptions): string {
   if (options.cookie) return options.cookie;
-  const parts = [`sessionKey=${options.sessionKey}`];
-  if (options.cfClearance) parts.push(`cf_clearance=${options.cfClearance}`);
-  return parts.join("; ");
+  return `sessionKey=${options.sessionKey}; cf_clearance=${options.cfClearance}`;
 }
 
 export class ClaudeApi {
@@ -43,7 +41,7 @@ export class ClaudeApi {
     this.baseUrl = (options.baseUrl ?? "https://claude.ai").replace(/\/$/, "");
     this.orgUuid = options.organizationUuid;
     this.cookie = buildCookie(options);
-    this.userAgent = options.userAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
+    this.userAgent = options.userAgent;
   }
 
   private headers(): Record<string, string> {

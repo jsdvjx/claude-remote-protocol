@@ -500,14 +500,14 @@ export interface ClaudeRemoteOptions {
   organizationUuid: string;
   /** Session key (sk-ant-sid02-...) */
   sessionKey: string;
-  /** Cloudflare cf_clearance cookie (required to bypass Cloudflare challenge) */
-  cfClearance?: string;
+  /** Cloudflare cf_clearance cookie value */
+  cfClearance: string;
+  /** User-Agent string (must match the browser that generated cf_clearance) */
+  userAgent: string;
   /** Full cookie string override. If provided, sessionKey and cfClearance are ignored. */
   cookie?: string;
   /** Base URL, defaults to https://claude.ai */
   baseUrl?: string;
   /** Custom WS host override (defaults to deriving from baseUrl) */
   wsHost?: string;
-  /** User-Agent string (must match the browser that generated cf_clearance cookie) */
-  userAgent?: string;
 }

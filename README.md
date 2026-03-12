@@ -35,9 +35,7 @@ import { ClaudeClient } from "claude-remote-protocol";
 const client = new ClaudeClient({
   organizationUuid: "your-org-uuid",
   sessionKey: "sk-ant-sid02-...",
-  // Optional: required if Cloudflare challenge is active
   cfClearance: "...",
-  // Optional: must match the browser that generated cfClearance
   userAgent: "Mozilla/5.0 ...",
 });
 
@@ -112,10 +110,10 @@ Top-level entry point. Pass credentials once, manage multiple sessions.
 const client = new ClaudeClient({
   organizationUuid: string,
   sessionKey: string,          // sk-ant-sid02-...
-  cfClearance?: string,        // Cloudflare cf_clearance cookie
-  cookie?: string,             // Full cookie override (if set, sessionKey/cfClearance ignored)
+  cfClearance: string,         // Cloudflare cf_clearance cookie
+  userAgent: string,           // must match browser that generated cfClearance
+  cookie?: string,             // full cookie override (sessionKey/cfClearance ignored)
   baseUrl?: string,            // default: "https://claude.ai"
-  userAgent?: string,          // must match browser that generated cfClearance
 });
 
 // Connect to existing session (returns connected SessionManager)
@@ -150,7 +148,8 @@ HTTP REST client for session management (also accessible via `client.api`).
 const api = new ClaudeApi({
   organizationUuid: string,
   sessionKey: string,
-  cfClearance?: string,
+  cfClearance: string,
+  userAgent: string,
   cookie?: string,             // full cookie override
   baseUrl?: string,
 });
@@ -176,6 +175,8 @@ const session = new SessionManager({
   // Required
   organizationUuid: string,
   sessionKey: string,
+  cfClearance: string,
+  userAgent: string,
   sessionId: string,
 
   // Optional
@@ -245,20 +246,19 @@ See [PROTOCOL.md](./PROTOCOL.md) for the complete protocol specification with al
 
 You need three things from your `claude.ai` browser session:
 
-1. **`sessionKey`** — Open DevTools → Application → Cookies → copy the `sessionKey` value (`sk-ant-sid02-...`)
-2. **`organizationUuid`** — From any API request in Network tab, copy the `x-organization-uuid` header
-3. **`cfClearance`** *(optional)* — Copy the `cf_clearance` cookie value. Required if Cloudflare challenge is active. Must be used with matching `userAgent`.
+1. **`sessionKey`** — DevTools → Application → Cookies → `sessionKey` (`sk-ant-sid02-...`)
+2. **`organizationUuid`** — Network tab → any API request → `x-organization-uuid` header
+3. **`cfClearance`** — DevTools → Application → Cookies → `cf_clearance`
+4. **`userAgent`** — Console → `navigator.userAgent` (must match the browser that generated `cfClearance`)
 
 ```typescript
 const client = new ClaudeClient({
   organizationUuid: "ed81b697-...",
   sessionKey: "sk-ant-sid02-...",
-  cfClearance: "DrW9nrPr...",               // optional
-  userAgent: "Mozilla/5.0 ...",              // must match cfClearance
+  cfClearance: "DrW9nrPr...",
+  userAgent: "Mozilla/5.0 ...",
 });
 ```
-
-You can also pass a full `cookie` string directly if preferred.
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "claude-remote-protocol",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Reverse-engineered TypeScript client for the Claude Code Remote (CCR) WebSocket protocol. Connect to Claude.ai sessions, send messages, handle tool permissions, and receive streaming responses.",
   "type": "module",
   "main": "dist/index.js",
