@@ -29,11 +29,13 @@ export class ClaudeApi {
   private baseUrl: string;
   private orgUuid: string;
   private cookie: string;
+  private userAgent: string;
 
   constructor(options: ClaudeRemoteOptions) {
     this.baseUrl = (options.baseUrl ?? "https://claude.ai").replace(/\/$/, "");
     this.orgUuid = options.organizationUuid;
     this.cookie = options.cookie;
+    this.userAgent = options.userAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
   }
 
   private headers(): Record<string, string> {
@@ -45,6 +47,7 @@ export class ClaudeApi {
       "anthropic-client-platform": "web_claude_ai",
       "anthropic-client-version": "1.0.0",
       "x-organization-uuid": this.orgUuid,
+      "user-agent": this.userAgent,
       cookie: this.cookie,
     };
   }

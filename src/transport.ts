@@ -10,12 +10,15 @@
  *  - Reconnect: exponential backoff up to 5 retries
  */
 
+import WebSocket from "ws";
 import type { WsAuthMessage, WsServerMessage, WsKeepAlive } from "./types";
 
 export interface TransportOptions {
   url: string;
   authMessage?: WsAuthMessage;
   signal?: AbortSignal;
+  /** Custom headers for the WebSocket upgrade request (cookie, user-agent, etc.) */
+  headers?: Record<string, string>;
 }
 
 export type TransportState = "connecting" | "connected" | "disconnected" | "error";
@@ -64,7 +67,9 @@ export class WsTransport {
         throw new Error("WebSocket URL must use ws:// or wss:// protocol");
       }
 
-      this.ws = new WebSocket(url.toString());
+      this.ws = new WebSocket(url.toString(), {
+        headers: this.options.headers,
+      });
       this._state = "connecting";
 
       const timeout = setTimeout(() => {
@@ -77,7 +82,7 @@ export class WsTransport {
         }
       }, 5000);
 
-      this.ws.onopen = () => {
+      this.ws.on("open", () => {
         clearTimeout(timeout);
         this._state = "connected";
         this.readyResolve?.();
@@ -98,26 +103,25 @@ export class WsTransport {
             } catch { /* ignore */ }
           }
         }, 50_000);
-      };
+      });
 
-      this.ws.onerror = () => {
+      this.ws.on("error", (err) => {
         clearTimeout(timeout);
         this._state = "error";
-        const err = new Error("WebSocket connection error");
         this._exitError = err;
         this.readyReject?.(err);
-      };
+      });
 
-      this.ws.onclose = (e) => {
+      this.ws.on("close", (code: number, reason: Buffer) => {
         this._state = "disconnected";
         this.closed = true;
         if (this.keepAliveTimer) {
           clearInterval(this.keepAliveTimer);
           this.keepAliveTimer = null;
         }
-        if (e.code !== 1000 && e.code !== 1001) {
+        if (code !== 1000 && code !== 1001) {
           this._exitError = new Error(
-            `WebSocket closed abnormally with code ${e.code}: ${e.reason}`
+            `WebSocket closed abnormally with code ${code}: ${reason.toString()}`
           );
         }
         // Resolve any pending message reader
@@ -125,10 +129,11 @@ export class WsTransport {
           this.messageResolve({ done: true, value: undefined as any });
           this.messageResolve = null;
         }
-      };
+      });
 
-      this.ws.onmessage = (e) => {
-        const lines = (e.data as string).split("\n");
+      this.ws.on("message", (data: Buffer | string, isBinary: boolean) => {
+        const raw = typeof data === "string" ? data : data.toString("utf-8");
+        const lines = raw.split("\n");
         for (const line of lines) {
           if (!line.trim()) continue;
           try {
@@ -136,7 +141,7 @@ export class WsTransport {
             this.enqueueMessage(msg);
           } catch { /* skip malformed */ }
         }
-      };
+      });
 
       // Handle abort signal
       if (this.options.signal) {

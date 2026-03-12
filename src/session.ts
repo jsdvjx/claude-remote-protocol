@@ -143,9 +143,21 @@ export class SessionManager {
     this.abortController = new AbortController();
 
     const url = this.buildWsUrl();
+    const userAgent = this.options.userAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
     this.transport = new WsTransport({
       url,
       signal: this.abortController.signal,
+      headers: {
+        "cookie": this.options.cookie,
+        "user-agent": userAgent,
+        "origin": (this.options.baseUrl ?? "https://claude.ai").replace(/\/$/, ""),
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "ccr-byoc-2025-07-29",
+        "anthropic-client-feature": "ccr",
+        "anthropic-client-platform": "web_claude_ai",
+        "anthropic-client-version": "1.0.0",
+        "x-organization-uuid": this.options.organizationUuid,
+      },
     });
 
     try {
@@ -154,24 +166,31 @@ export class SessionManager {
       this.retryCount = 0;
       this.resetIdleTimer();
 
-      // Send initialize immediately after WS open (verified from real traffic)
+      // Start reading messages from WS
       this.readLoop();
-      try {
-        const resp = await this.sendControlRequest({ subtype: "initialize" });
-        if (resp.subtype === "success") {
-          this.initResponse = (resp as ControlResponseSuccess).response as InitializeResponse;
-          this.initialized = true;
-          // Process any pending permission requests from the init response
-          const pending = (resp as ControlResponseSuccess).pending_permission_requests;
-          if (pending) {
-            for (const req of pending) {
-              this.handleControlRequest(req);
+
+      // Send initialize (fire-and-forget with timeout — bridge may not be ready yet)
+      const initTimeout = 5000;
+      const initPromise = this.sendControlRequest({ subtype: "initialize" })
+        .then((resp) => {
+          if (resp.subtype === "success") {
+            this.initResponse = (resp as ControlResponseSuccess).response as InitializeResponse;
+            this.initialized = true;
+            const pending = (resp as ControlResponseSuccess).pending_permission_requests;
+            if (pending) {
+              for (const req of pending) {
+                this.handleControlRequest(req);
+              }
             }
           }
-        }
-      } catch (initErr) {
-        this.options.onError?.(new Error(`Initialize failed: ${(initErr as Error).message}`));
-      }
+        })
+        .catch(() => { /* initialize may not be supported for this session */ });
+
+      // Wait up to initTimeout for initialize, but don't block connect
+      await Promise.race([
+        initPromise,
+        new Promise<void>((r) => setTimeout(r, initTimeout)),
+      ]);
     } catch (err) {
       this.setState("error");
       this.options.onError?.(err as Error);
@@ -330,17 +349,16 @@ export class SessionManager {
         if (msg.type === "keep_alive") continue;
 
         if (msg.type === "assistant") {
-          this.options.onAssistantMessage?.(msg as WsAssistantMessage);
+          try { this.options.onAssistantMessage?.(msg as WsAssistantMessage); }
+          catch (e) { this.options.onError?.(e as Error); }
           continue;
         }
 
         if (msg.type === "result") {
-          this.options.onResult?.(msg as WsResultMessage);
+          try { this.options.onResult?.(msg as WsResultMessage); }
+          catch (e) { this.options.onError?.(e as Error); }
           continue;
         }
-
-        // Unknown type — still emit as result
-        this.options.onResult?.(msg as WsResultMessage);
       }
     } catch (err) {
       this.options.onError?.(err as Error);
