@@ -1,6 +1,12 @@
+export { ClaudeClient } from "./client";
 export { ClaudeApi, ApiError } from "./api";
 export { WsTransport } from "./transport";
 export { SessionManager } from "./session";
+export type {
+  SessionCallbacks,
+  ConnectOptions,
+  CreateOptions,
+} from "./client";
 export type {
   TransportOptions,
   TransportState,

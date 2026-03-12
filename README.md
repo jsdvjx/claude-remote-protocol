@@ -29,44 +29,45 @@ Requires Node.js >= 18 (uses native `fetch` and `WebSocket`).
 ## Quick Start
 
 ```typescript
-import { SessionManager, ClaudeApi } from "claude-remote-protocol";
+import { ClaudeClient } from "claude-remote-protocol";
 
-// 1. Create API client
-const api = new ClaudeApi({
+// 1. Create client (pass credentials once)
+const client = new ClaudeClient({
   organizationUuid: "your-org-uuid",
   cookie: "sessionKey=sk-ant-...",
 });
 
-// 2. List existing sessions
-const sessions = await api.listSessions();
-console.log(sessions.data);
-
-// 3. Connect to a session via WebSocket
-const session = new SessionManager({
-  organizationUuid: "your-org-uuid",
-  cookie: "sessionKey=sk-ant-...",
-  sessionId: "session_01...",
-
+// 2. Connect to an existing session
+const session = await client.connect("session_01...", {
   onAssistantMessage(msg) {
     for (const block of msg.message.content) {
       if (block.type === "text") process.stdout.write(block.text ?? "");
     }
   },
-
   onResult(msg) {
     console.log(`Done: ${msg.num_turns} turns, $${msg.total_cost_usd}`);
   },
-
-  onToolPermission: async (toolName, input) => {
-    // Auto-allow all tools (or implement your own logic)
-    return { behavior: "allow", updatedInput: input };
-  },
 });
 
-await session.connect();
-
-// 4. Send a message
 await session.sendMessage("Hello, Claude!");
+
+// 3. Or create a new session (auto-selects active environment)
+const newSession = await client.create({
+  model: "claude-sonnet-4-6",
+  title: "My Task",
+  onAssistantMessage(msg) { /* ... */ },
+});
+
+await newSession.sendMessage("Start working on the task.");
+
+// 4. Multiple sessions in parallel
+const [s1, s2] = await Promise.all([
+  client.connect("session_A", { onResult(m) { console.log("A done"); } }),
+  client.connect("session_B", { onResult(m) { console.log("B done"); } }),
+]);
+
+// 5. Cleanup
+client.disconnectAll();
 ```
 
 ## Architecture
@@ -99,9 +100,44 @@ Client                          Server
 
 ## API Reference
 
+### `ClaudeClient`
+
+Top-level entry point. Pass credentials once, manage multiple sessions.
+
+```typescript
+const client = new ClaudeClient({
+  organizationUuid: string,
+  cookie: string,
+  baseUrl?: string,  // default: "https://claude.ai"
+});
+
+// Connect to existing session (returns connected SessionManager)
+const session = await client.connect(sessionId, {
+  replay?: boolean,
+  maxRetries?: number,
+  idleTimeout?: number,
+  onAssistantMessage?, onResult?, onToolPermission?, onError?,
+});
+
+// Create new session + connect (auto-selects environment if omitted)
+const session = await client.create({
+  environmentId?: string,
+  model?: string,           // default: "claude-sonnet-4-6"
+  title?: string,
+  sessionContext?: Partial<SessionContext>,
+  // ...same callbacks as connect
+});
+
+await client.listSessions();
+await client.listEnvironments();
+client.getConnected(sessionId);   // get a previously connected session
+client.disconnect(sessionId);     // disconnect one
+client.disconnectAll();           // disconnect all
+```
+
 ### `ClaudeApi`
 
-HTTP REST client for session management.
+HTTP REST client for session management (also accessible via `client.api`).
 
 ```typescript
 const api = new ClaudeApi({
