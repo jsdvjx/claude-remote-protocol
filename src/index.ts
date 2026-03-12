@@ -1,5 +1,5 @@
 export { ClaudeClient } from "./client";
-export { ClaudeApi, ApiError } from "./api";
+export { ClaudeApi, ApiError, buildCookie } from "./api";
 export { WsTransport } from "./transport";
 export { SessionManager } from "./session";
 export type {

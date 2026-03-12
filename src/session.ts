@@ -13,7 +13,7 @@
  */
 
 import { WsTransport } from "./transport";
-import { ClaudeApi } from "./api";
+import { ClaudeApi, buildCookie } from "./api";
 import type {
   ClaudeRemoteOptions,
   WsServerMessage,
@@ -148,7 +148,7 @@ export class SessionManager {
       url,
       signal: this.abortController.signal,
       headers: {
-        "cookie": this.options.cookie,
+        "cookie": buildCookie(this.options),
         "user-agent": userAgent,
         "origin": (this.options.baseUrl ?? "https://claude.ai").replace(/\/$/, ""),
         "anthropic-version": "2023-06-01",

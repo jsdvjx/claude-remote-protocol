@@ -498,8 +498,12 @@ export interface EnvironmentListResponse {
 export interface ClaudeRemoteOptions {
   /** Organization UUID */
   organizationUuid: string;
-  /** Cookie string for authentication (from browser session, must include cf_clearance) */
-  cookie: string;
+  /** Session key (sk-ant-sid02-...) */
+  sessionKey: string;
+  /** Cloudflare cf_clearance cookie (required to bypass Cloudflare challenge) */
+  cfClearance?: string;
+  /** Full cookie string override. If provided, sessionKey and cfClearance are ignored. */
+  cookie?: string;
   /** Base URL, defaults to https://claude.ai */
   baseUrl?: string;
   /** Custom WS host override (defaults to deriving from baseUrl) */

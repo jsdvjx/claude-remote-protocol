@@ -25,6 +25,14 @@ import type {
   EnvironmentListResponse,
 } from "./types";
 
+/** Build cookie string from options */
+export function buildCookie(options: ClaudeRemoteOptions): string {
+  if (options.cookie) return options.cookie;
+  const parts = [`sessionKey=${options.sessionKey}`];
+  if (options.cfClearance) parts.push(`cf_clearance=${options.cfClearance}`);
+  return parts.join("; ");
+}
+
 export class ClaudeApi {
   private baseUrl: string;
   private orgUuid: string;
@@ -34,7 +42,7 @@ export class ClaudeApi {
   constructor(options: ClaudeRemoteOptions) {
     this.baseUrl = (options.baseUrl ?? "https://claude.ai").replace(/\/$/, "");
     this.orgUuid = options.organizationUuid;
-    this.cookie = options.cookie;
+    this.cookie = buildCookie(options);
     this.userAgent = options.userAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
   }
 
