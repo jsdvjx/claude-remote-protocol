@@ -244,20 +244,56 @@ See [PROTOCOL.md](./PROTOCOL.md) for the complete protocol specification with al
 
 ## Authentication
 
-You need three things from your `claude.ai` browser session:
+All credentials can be extracted from **any `claude.ai` page** (homepage, settings, any conversation — no need to open a specific session).
 
-1. **`sessionKey`** — DevTools → Application → Cookies → `sessionKey` (`sk-ant-sid02-...`)
-2. **`organizationUuid`** — Network tab → any API request → `x-organization-uuid` header
-3. **`cfClearance`** — DevTools → Application → Cookies → `cf_clearance`
-4. **`userAgent`** — Console → `navigator.userAgent` (must match the browser that generated `cfClearance`)
+### Step-by-step extraction
+
+**1. Open DevTools** — Press `F12` on any `claude.ai` page
+
+**2. Get `sessionKey` and `cfClearance` from Cookies:**
+- Go to **Application** tab → **Cookies** → `https://claude.ai`
+- Find `sessionKey` — value starts with `sk-ant-sid02-...`
+- Find `cf_clearance` — a long alphanumeric string
+
+**3. Get `organizationUuid`:**
+- Option A: In **Application** → **Cookies**, find `lastActiveOrg` — that's your org UUID
+- Option B: In **Network** tab, click any request to `claude.ai/v1/...`, check the `x-organization-uuid` request header
+
+**4. Get `userAgent`:**
+- Go to **Console** tab, type `navigator.userAgent` and press Enter
+- Copy the full string (e.g. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...`)
+- **Important:** This must be the exact User-Agent of the browser that generated the `cf_clearance` cookie. Using a different User-Agent will result in Cloudflare 403 errors.
+
+### Notes
+
+- `cf_clearance` expires periodically (typically when Cloudflare re-challenges). If you get 403 errors, re-extract it.
+- `sessionKey` is long-lived but can be invalidated by logging out.
+- All four cookies are set at the `claude.ai` domain level, so they are the same on every page.
+
+### Usage
 
 ```typescript
+import { ClaudeClient } from "claude-remote-protocol";
+
 const client = new ClaudeClient({
   organizationUuid: "ed81b697-...",
   sessionKey: "sk-ant-sid02-...",
   cfClearance: "DrW9nrPr...",
-  userAgent: "Mozilla/5.0 ...",
+  userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ...",
 });
+```
+
+### Programmatic extraction (CDP)
+
+If you have a Chrome instance with remote debugging enabled (`--remote-debugging-port=9222`), you can extract credentials programmatically:
+
+```typescript
+// Get cookies via Chrome DevTools Protocol
+const resp = await fetch("http://localhost:9222/json");
+const [tab] = await resp.json();
+// Connect to tab via WebSocket, then:
+// - Network.getCookies({ urls: ["https://claude.ai"] }) → sessionKey, cf_clearance, lastActiveOrg
+// - Browser.getVersion() → userAgent
 ```
 
 ## License
