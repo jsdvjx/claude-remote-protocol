@@ -10,7 +10,7 @@ import { writeFileSync } from "fs";
 
 const CDP_PORT = 19222;
 const OUTPUT_FILE = "ws-capture.json";
-const TARGET_SESSION = process.argv[2] || "session_013V7kQwf8ZzmfftDxdwv2nL";
+const TARGET_SESSION = process.argv[2] || "YOUR_SESSION_ID";
 const TARGET_URL = `https://claude.ai/code/${TARGET_SESSION}`;
 
 interface WsFrame {
